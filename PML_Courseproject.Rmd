@@ -1,0 +1,129 @@
+---
+title: 'Peer-graded Assignment: Prediction Assignment Writeup'
+author: "Ayush Mohapatra"
+date: "10/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goal 
+
+The goal of your project is to predict the manner in which they did the exercise. 
+Your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+
+## Verification
+To check the validity of the fitness devices and if they give the correct output.
+
+
+## Data 
+This report contains the prediction analysis and data are used from the following sites:
+
+http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv for the training data, and 
+http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv for the testing data.
+
+The dataset consists of:
+
+  A) The Posture is Exactly correct
+  B) Throwing elbows to the front
+  C) Lifting dumbbell halfway
+  D) Lowering dumbell halfway
+  E) Throwing hips to the front
+  
+  
+## Downloading and Reading the data
+
+The file is downloaded from the given websites and is stored in the variable "dataset"
+
+
+```{r}
+if(!file.exists("pml-training.csv"))
+{
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv", method = 'curl')
+}
+dataset <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+if(!file.exists("pml-testing.csv"))
+{
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "pml-testing.csv", method = 'curl')
+}
+validation <- read.csv("pml-testing.csv")
+```
+
+## Preprocessing
+
+Packages are installed 
+
+```{r}
+library(caret)
+library(randomForest)
+```
+
+
+For reproducibilty, a seed is set.
+
+```{r}
+set.seed(17)
+```
+
+
+## Data Partitioning
+
+```{r}
+inTrain = createDataPartition(y=dataset$classe, p=0.7, list=FALSE) #70percent data goes to training set
+training = dataset[inTrain,]
+testing = dataset[-inTrain,]
+```
+
+
+Removing entries with values= NA
+
+```{r}
+naColumns = sapply(training, function(x) {sum(is.na(x))}) 
+naColumns
+columnsWithNA = names(naColumns[naColumns > 0]) 
+training = training[, !names(training) %in% columnsWithNA] 
+names(training)
+
+training <- training[, !names(training) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")]
+```
+
+## Removing NA values for Validation and Testing Set
+
+```{r}
+naColumns = sapply(validation, function(x) {sum(is.na(x))}) 
+columnsWithNA = names(naColumns[naColumns > 0]) 
+validation = validation[, !names(validation) %in% columnsWithNA] 
+validation <- validation[, !names(validation) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")]
+```
+
+```{r}
+naColumns = sapply(testing, function(x) {sum(is.na(x))}) 
+columnsWithNA = names(naColumns[naColumns > 0]) 
+testing = testing[, !names(testing) %in% columnsWithNA] 
+testing <- testing[, !names(testing) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")]
+```
+
+## Prediction Model
+
+```{r acc}
+model <- randomForest(classe ~ .,   data=training, ntree = 50)
+predictions <- predict(model, testing)
+confusionMatrix(predictions, testing$classe)
+modelAcc <- confusionMatrix(predictions, testing$classe)$overall[[1]]
+```
+
+Prediction Model is accurate and the same function has to be carried out on validation set
+
+```{r}
+predictions <- predict(model, validation)
+predictions
+```
+
+## Conclusion
+
+Error in testing set is much higher than  in validation set.
+
+
